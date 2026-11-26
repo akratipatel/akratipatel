@@ -1,4 +1,4 @@
 ## name
  kavya patel
  ## student 
- baba saheb dr bhim rao ambedkar etawah
+ baba saheb dr bhim rao ambedkar college etawah
