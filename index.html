@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaaya Hospital - Queue Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- LEFT SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="hospital-brand">
+                <div class="logo-icon">+</div>
+                <h2>KAAYA HOSPITAL</h2>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-btn active" onclick="switchTab('doctor', this)">
+                    🩺 Doctor Dashboard
+                </button>
+                <button class="nav-btn" onclick="switchTab('staff', this)">
+                    📋 Staff Dashboard
+                </button>
+                <button class="nav-btn" onclick="switchTab('patient', this)">
+                    🧑‍⚕️ Patient Dashboard
+                </button>
+            </nav>
+
+            <div class="sync-status">
+                <span class="status-dot" id="syncDot"></span>
+                <span id="syncText">Local Mode (Ready for Firestore)</span>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1 id="pageTitle">KAAYA HOSPITAL - DOCTOR DASHBOARD</h1>
+                <div class="date-badge" id="todayDateDisplay"></div>
+            </header>
+
+            <!-- ==========================================
+                 1. DOCTOR DASHBOARD
+            =========================================== -->
+            <section id="doctor-section" class="dashboard-section active">
+                <div class="call-banner">
+                    <div class="banner-info">
+                        <span id="queueAlertText">Currently no patients in consultation. First patient is waiting.</span>
+                    </div>
+                    <button id="doctorCallBtn" class="btn-call-primary" onclick="callPatient()">
+                        CALL FIRST PATIENT
+                    </button>
+                </div>
+
+                <div class="grid-2-col">
+                    <!-- Current Patient Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>CURRENT CONSULTATION</h3>
+                            <span class="badge badge-pink" id="currentTokenBadge">Token: --</span>
+                        </div>
+                        <div class="patient-details-box">
+                            <p><strong>Patient Name:</strong> <span id="docPatName">--</span></p>
+                            <p><strong>Age / Gender:</strong> <span id="docPatAgeGender">--</span></p>
+                            <p><strong>Disease / Problem:</strong> <span id="docPatDisease">--</span></p>
+                            <p><strong>Appointment Slot:</strong> <span id="docPatSlot">--</span></p>
+                            <p><strong>Status:</strong> <span class="badge badge-blue" id="docPatStatus">Idle</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Prescription & Notes Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>PRESCRIPTION & NOTES</h3>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmedDisease">Confirm / Update Disease:</label>
+                            <select id="confirmedDisease">
+                                <option value="Fever">Fever</option>
+                                <option value="Common Cold">Common Cold</option>
+                                <option value="Allergy">Allergy</option>
+                                <option value="Injury">Injury</option>
+                                <option value="Stomach Pain">Stomach Pain</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="prescriptionText">Medicines & Doctor's Advice:</label>
+                            <textarea id="prescriptionText" rows="3" placeholder="Write medicines, dosage, and notes here..."></textarea>
+                        </div>
+                        <button class="btn-green" onclick="savePrescription()">Save Prescription & Complete</button>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Waiting Queue & Month-wise Chart -->
+                <div class="grid-2-col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>TODAY'S WAITING QUEUE</h3>
+                            <span class="badge badge-grey" id="waitingCountBadge">0 Waiting</span>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Token</th>
+                                        <th>Patient</th>
+                                        <th>Slot</th>
+                                        <th>Problem</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="doctorQueueTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>MONTH-WISE DISEASE VISIT CHART</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="diseaseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 2. STAFF DASHBOARD
+            =========================================== -->
+            <section id="staff-section" class="dashboard-section">
+                <div class="grid-2-col">
+                    <!-- Walk-In Patient Registration -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>WALK-IN / STAFF BOOKING</h3>
+                            <span class="badge badge-green">Quick Entry</span>
+                        </div>
+                        <form id="staffBookingForm" onsubmit="bookAppointment(event, 'staff')">
+                            <div class="form-group">
+                                <label>Patient Full Name</label>
+                                <input type="text" id="staffPatName" required placeholder="Enter patient name">
+                            </div>
+                            <div class="grid-2-col-tight">
+                                <div class="form-group">
+                                    <label>Age</label>
+                                    <input type="number" id="staffPatAge" required min="1" max="120" placeholder="Age">
+                                </div>
+                                <div class="form-group">
+                                    <label>Gender</label>
+                                    <select id="staffPatGender">
+                                        <option value="Female">Female</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Disease / Symptom</label>
+                                <select id="staffPatDisease">
+                                    <option value="Fever">Fever</option>
+                                    <option value="Common Cold">Common Cold</option>
+                                    <option value="Allergy">Allergy</option>
+                                    <option value="Injury">Injury</option>
+                                    <option value="Stomach Pain">Stomach Pain</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="grid-2-col-tight">
+                                <div class="form-group">
+                                    <label>Select Date</label>
+                                    <input type="date" id="staffDateSelect" onchange="populateStaffSlotDropdown()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Select Available Slot</label>
+                                    <select id="staffSlotSelect" required></select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-blue">Book Walk-In Appointment</button>
+                        </form>
+                    </div>
+
+                    <!-- Slot Availability Controller -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>MANAGE SLOTS (10:00 AM - 5:00 PM)</h3>
+                            <span class="badge badge-pink">Toggle Unavailable</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Date to Manage Slots:</label>
+                            <input type="date" id="staffManageDate" onchange="renderStaffSlotManager()">
+                        </div>
+                        <p class="helper-text">Click an <strong>Available</strong> slot to mark it <strong>Unavailable</strong> (e.g., Break), or click Unavailable to reopen.</p>
+                        <div class="slots-grid" id="staffSlotManagerGrid"></div>
+                    </div>
+                </div>
+
+                <!-- All Appointments List -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>ALL APPOINTMENTS & PRESCRIPTION RECORDS</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th>Date</th>
+                                    <th>Slot</th>
+                                    <th>Patient Name</th>
+                                    <th>Age/Gender</th>
+                                    <th>Disease</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffAppointmentsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 3. PATIENT DASHBOARD (Light Sky Blue Theme)
+            =========================================== -->
+            <section id="patient-section" class="dashboard-section sky-blue-theme">
+                <div class="patient-booking-wrapper">
+                    <!-- Left: Patient Details Form -->
+                    <div class="card booking-form-card">
+                        <div class="card-header">
+                            <h3>BOOK YOUR APPOINTMENT</h3>
+                            <span class="badge badge-green">10:00 AM - 5:00 PM</span>
+                        </div>
+                        <form id="patientBookingForm" onsubmit="bookAppointment(event, 'patient')">
+                            <div class="form-group">
+                                <label>Your Full Name</label>
+                                <input type="text" id="patName" required placeholder="e.g. Aarav Kumar">
+                            </div>
+                            <div class="grid-2-col-tight">
+                                <div class="form-group">
+                                    <label>Age</label>
+                                    <input type="number" id="patAge" required min="1" max="120" placeholder="e.g. 28">
+                                </div>
+                                <div class="form-group">
+                                    <label>Gender</label>
+                                    <select id="patGender">
+                                        <option value="Female">Female</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="patPhone" required placeholder="e.g. 9876543210">
+                            </div>
+                            <div class="form-group">
+                                <label>Select Problem / Disease</label>
+                                <select id="patDisease">
+                                    <option value="Fever">Fever</option>
+                                    <option value="Common Cold">Common Cold</option>
+                                    <option value="Allergy">Allergy</option>
+                                    <option value="Injury">Injury</option>
+                                    <option value="Stomach Pain">Stomach Pain</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Selected Time Slot</label>
+                                <input type="text" id="selectedSlotDisplay" readonly placeholder="Click an Available slot on the right" required>
+                            </div>
+                            <button type="submit" class="btn-confirm-booking">CONFIRM APPOINTMENT</button>
+                        </form>
+
+                        <div id="bookingConfirmationBox" class="confirmation-box hidden">
+                            <h4>✅ Appointment Confirmed!</h4>
+                            <p id="confirmationDetails"></p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Date & 15-Min Slots Grid -->
+                    <div class="card slots-card">
+                        <div class="card-header">
+                            <h3>SELECT DATE & 15-MIN TIME SLOT</h3>
+                        </div>
+                        <div class="date-picker-bar">
+                            <label for="patientDateSelect"><strong>Choose Appointment Date:</strong></label>
+                            <input type="date" id="patientDateSelect" onchange="renderPatientSlots()">
+                        </div>
+
+                        <div class="slot-legend">
+                            <span class="legend-item"><i class="dot green"></i> Available</span>
+                            <span class="legend-item"><i class="dot pink"></i> Booked</span>
+                            <span class="legend-item"><i class="dot grey"></i> Unavailable</span>
+                        </div>
+
+                        <div class="slots-grid" id="patientSlotsGrid"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <script src="app.js"></script>
+</body>
+</html>
